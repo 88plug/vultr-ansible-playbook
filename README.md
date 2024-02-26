@@ -27,17 +27,16 @@ Before running this playbook, ensure you have:
 
 2. **Edit Configuration**:
 
-    Modify variables in `deploy.yml` to fit your requirements.
+    Modify variables in `deploy.yml` and `vps.yml` to fit your requirements. `deploy.yml` will create the new VPS on Vultr. `vps.yml` will configure them once SSH is ready.
 
-3. **Run Playbook**:
+4. **Run Playbooks**:
 
-    Execute the playbook:
+    Execute the playbooks:
 
     ```bash
     ansible-playbook -i inventory.ini deploy.yml ; ansible-playbook -i inventory.ini vps.yml
     ```
 
-deploy.yml will create the new VPS and vps.yml will configure them.
 
 ## Playbook Overview
 
