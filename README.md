@@ -34,8 +34,10 @@ Before running this playbook, ensure you have:
     Execute the playbook:
 
     ```bash
-    ansible-playbook deploy.yml
+    ansible-playbook -i inventory.ini deploy.yml ; ansible-playbook -i inventory.ini vps.yml
     ```
+
+deploy.yml will create the new VPS and vps.yml will configure them.
 
 ## Playbook Overview
 
