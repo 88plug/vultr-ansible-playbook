@@ -1,0 +1,34 @@
+---
+- name: Configure VPS on Vultr
+  hosts: all
+  become: yes
+  vars:
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no" #Disable check for new hosts
+
+  tasks:
+    - name: Install necessary packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+        update_cache: yes
+        state: present
+
+    - name: Initialize Docker Swarm on the first node
+      command: docker swarm init --advertise-addr {{ ansible_default_ipv4.address }}
+      environment:
+        ANSIBLE_HOST_KEY_CHECKING: "False"
+      when: inventory_hostname == groups['all'][0]
+
+    - name: Retrieve Docker Swarm join token
+      command: docker swarm join-token manager -q
+      environment:
+        ANSIBLE_HOST_KEY_CHECKING: "False"
+      register: join_token
+      when: inventory_hostname == groups['all'][0]
+
+    - name: Join node to the Docker Swarm
+      command: docker swarm join --token {{ hostvars[groups['all'][0]].join_token.stdout }} {{ hostvars[groups['all'][0]].ansible_default_ipv4.address }}:2377
+      environment:
+        ANSIBLE_HOST_KEY_CHECKING: "False"
+      when: groups['all'] | length > 1 and inventory_hostname != groups['all'][0]
