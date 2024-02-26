@@ -1,0 +1,109 @@
+---
+- name: Configure VPS on Vultr
+  hosts: all
+  become: yes
+  vars:
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=no" #Disable check for new hosts
+
+  tasks:
+    - name: Ensure the system timezone is set to UTC
+      ansible.builtin.timezone:
+        name: Etc/UTC
+
+    - name: Update and upgrade all packages
+      apt:
+        upgrade: dist
+        update_cache: yes
+        cache_valid_time: 3600
+        autoclean: yes
+        autoremove: yes
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+      tags: upgrade
+
+    - name: Install necessary packages
+      apt:
+        name:
+          - net-tools
+          - unzip
+          - bmon
+          - htop
+          - iotop
+          - jq
+          - bc
+          - git
+          - curl
+          - screen
+          - qrencode
+          - lvm2
+          - python3-pip
+          - gunicorn
+          - fail2ban
+          - chrony
+        update_cache: yes
+        state: present
+
+    - name: Ensure chrony service is enabled and running
+      service:
+        name: chronyd
+        state: started
+        enabled: true
+
+    - name: Force an immediate synchronization of the time
+      command:
+        cmd: chronyc makestep
+      changed_when: false
+
+    - name: Check if NTP is synchronized
+      command: chronyc tracking
+      register: ntp_status
+      changed_when: false
+
+    - name: Display NTP synchronization status
+      debug:
+        var: ntp_status.stdout_lines
+
+    - name: Increase max FD limit / ulimit
+      blockinfile:
+        path: "/etc/security/limits.conf"
+        block: |
+          * soft     nproc          1048576
+          * hard     nproc          1048576
+          * soft     nofile         1048576
+          * hard     nofile         1048576
+          root soft     nproc          unlimited
+          root hard     nproc          unlimited
+          root soft     nofile         unlimited
+          root hard     nofile         unlimited
+
+    - name: Add sysctl.conf parameters
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        sysctl_set: yes
+        reload: yes
+      loop:
+        - { name: 'vm.min_free_kbytes', value: '131072' } #128Mb Memory Reserve
+        - { name: 'vm.swappiness', value: '0' }
+        - { name: 'fs.inotify.max_queued_events', value: '1048576' }
+        - { name: 'fs.inotify.max_user_instances', value: '1048576' }
+        - { name: 'fs.inotify.max_user_watches', value: '1048576' }
+        - { name: 'vm.max_map_count', value: '262144' }
+        - { name: 'fs.aio-max-nr', value: '524288' }
+
+    - name: Clear all journald logs
+      command: journalctl --vacuum-time=1s
+
+    - name: Restart server
+      reboot:
+        msg: "Rebooting to apply system changes"
+        connect_timeout: 15
+        reboot_timeout: 900
+        post_reboot_delay: 60
+        test_command: uptime
+      when: reboot | default(true) | bool
+
+    - name: Final message
+      ansible.builtin.debug:
+        msg: "The system has been rebooted"
