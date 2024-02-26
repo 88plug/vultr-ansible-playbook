@@ -1,0 +1,81 @@
+---
+#Runs locally and executes commands against new VPS once created
+- name: Deploy and configure Docker Swarm nodes on Vultr
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  vars:
+    vultr_api_key: ""
+    #from vultr website
+    ssh_key_name: ""
+    #from vultr-cli ssh-key list
+    region: "ams"
+    plan: "vhp-4c-8gb-amd"
+    #from vultr-cli plans list
+    os_id: "2136" # Debian 12 x64
+    #from vultr-cli os list
+    instance_count: 2
+    label_base: "swarmz"
+    #new vps will have this name and instance number
+
+  tasks:
+    - name: Ensure the system timezone is set to UTC
+      ansible.builtin.timezone:
+        name: Etc/UTC
+    
+    - name: Deploy Vultr instances
+      loop: "{{ range(1, instance_count + 1)|list }}"
+      loop_control:
+        index_var: instance_index
+      command: vultr-cli instance create --region="{{ region }}" --plan="{{ plan }}" --os="{{ os_id }}" --label="{{ label_base }}-{{ instance_index }}" --ssh-keys="{{ ssh_key_name }}"
+      environment:
+        VULTR_API_KEY: "{{ vultr_api_key }}"
+      register: instances
+      changed_when: true
+
+    - name: Sleep for 45 seconds
+      ansible.builtin.command:
+        cmd: sleep 45
+
+    - name: List Vultr instances to retrieve IPs
+      command: vultr-cli instance list -o json
+      environment:
+        VULTR_API_KEY: "{{ vultr_api_key }}"
+      register: vultr_instances_raw
+      changed_when: false
+    
+    - name: Set fact for instance IPs based on deployment labels
+      set_fact:
+        instance_ips: "{{ (vultr_instances_raw.stdout | from_json).instances | selectattr('label', 'search', label_base) | map(attribute='main_ip') | list }}"
+  
+    - name: Display instance IPs
+      debug:
+        msg: "Instance IPs: {{ instance_ips }}"
+      failed_when: instance_ips | length == 0
+  
+    - name: Wait for instances to be SSH accessible
+      wait_for:
+        host: "{{ item }}"
+        port: 22
+        state: started
+        delay: 10
+        timeout: 300
+      loop: "{{ instance_ips }}"
+    
+    - name: Install necessary packages on new VPS instances
+      ansible.builtin.command:
+        cmd: >
+          ssh -o StrictHostKeyChecking=no root@{{ item }} "apt-get update && apt-get dist-upgrade -y && apt-get install -y docker.io docker-compose unzip bmon htop iotop jq bc git curl screen lvm2 python3-pip fail2ban"
+      loop: "{{ instance_ips }}"
+    
+    - name: Set GRUB timeout to 0 seconds for near-instant booting on new VPS instances
+      ansible.builtin.command:
+        cmd: >
+          ssh -o StrictHostKeyChecking=no root@{{ item }} "sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' /etc/default/grub && update-grub"
+      loop: "{{ instance_ips }}"
+    
+    - name: Disable UFW
+      ansible.builtin.command:
+        cmd: >
+          ssh -o StrictHostKeyChecking=no root@{{ item }} "ufw disable"
+      loop: "{{ instance_ips }}"
