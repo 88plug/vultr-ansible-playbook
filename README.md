@@ -1,5 +1,7 @@
 # Vultr Ansible Playbook
 
+![image](https://github.com/88plug/vultr-ansible-playbook/assets/19512127/1b8ed33b-25e1-495a-b6ba-cea896a1bafb)
+
 This Ansible playbook automates the deployment and setup of Vultr VPS instances. It operates locally and executes commands remotely against newly created VPS instances.
 
 ## Prerequisites
