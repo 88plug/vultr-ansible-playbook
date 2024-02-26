@@ -34,7 +34,7 @@ Before running this playbook, ensure you have:
     Execute the playbooks:
 
     ```bash
-    ansible-playbook -i inventory.ini deploy.yml ; ansible-playbook -i inventory.ini vps.yml
+    ansible-playbook -i inventory.ini deploy.yml && ansible-playbook -i inventory.ini vps.yml
     ```
 
 
