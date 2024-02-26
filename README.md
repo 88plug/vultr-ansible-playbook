@@ -27,7 +27,7 @@ Before running this playbook, ensure you have:
 
 2. **Edit Configuration**:
 
-    Modify variables in `deploy.yml` and `vps.yml` to fit your requirements. `deploy.yml` will create the new VPS on Vultr. `vps.yml` will configure them once SSH is ready.
+    Modify variables in `deploy.yml` and `vps.yml` to fit your requirements. `deploy.yml` will create the new VPS on Vultr. `vps.yml` will configure the new VPS when SSH is ready.
 
 4. **Run Playbooks**:
 
