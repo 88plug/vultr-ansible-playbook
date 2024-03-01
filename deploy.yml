@@ -5,6 +5,7 @@
   connection: local
   gather_facts: no
   vars:
+    ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' #Disable check for new hosts
     vultr_api_key: ""
     #from vultr website
     ssh_key_name: ""
