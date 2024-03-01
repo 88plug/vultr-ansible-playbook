@@ -3,8 +3,7 @@
   hosts: all
   become: yes
   vars:
-    ansible_ssh_common_args: "-o StrictHostKeyChecking=no" #Disable check for new hosts
-
+    ansible_ssh_common_args: '-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no' #Disable check for new hosts
   tasks:
     - name: Install necessary packages
       apt:
